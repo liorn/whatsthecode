@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="description" content="Show the entry code for the building you're next to." />
+  <title>What's the Code</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>What's the Code</h1>
+  </header>
+  <main id="app" aria-live="polite"></main>
+  <nav class="bottom-nav" role="navigation">
+    <a href="#/" data-route="/">
+      <span class="icon" aria-hidden="true">◎</span>
+      <span>Nearest</span>
+    </a>
+    <a href="#/list" data-route="/list">
+      <span class="icon" aria-hidden="true">≣</span>
+      <span>All</span>
+    </a>
+    <a href="#/add" data-route="/add">
+      <span class="icon" aria-hidden="true">+</span>
+      <span>Add</span>
+    </a>
+  </nav>
+  <script src="app.js"></script>
+</body>
+</html>

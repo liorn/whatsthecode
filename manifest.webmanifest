@@ -1,0 +1,19 @@
+{
+  "name": "What's the Code",
+  "short_name": "Codes",
+  "description": "Shows the entry code for the building you're next to.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e0e10",
+  "theme_color": "#111111",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
