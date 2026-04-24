@@ -4,13 +4,14 @@
   const STORAGE_KEY = 'wtc.entries.v1';
   const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
   const SEARCH_DEBOUNCE_MS = 400;
-  const GEO_TIMEOUT_MS = 15000;
 
   // ---------- State ----------
   let entries = loadEntries();
   let currentPos = null;    // { lat, lng, accuracy } or null
   let geoState = 'idle';    // 'idle' | 'loading' | 'ok' | 'denied' | 'error'
+  let geoError = null;      // last GeolocationPositionError (or null)
   let formState = null;
+  let homeState = null;     // { sorted: Entry[], index: number } for prev/next on home
 
   const $app = document.getElementById('app');
 
@@ -46,10 +47,15 @@
   }
 
   // ---------- Geolocation ----------
-  function getPosition() {
+  // Low-first strategy: request a fast coarse fix (WiFi/cell); if the provider
+  // has nothing cached (TIMEOUT or POSITION_UNAVAILABLE) fall back to GPS-grade.
+  // PERMISSION_DENIED is terminal — no retry.
+  function requestPosition(opts) {
     return new Promise((resolve, reject) => {
       if (!('geolocation' in navigator)) {
-        reject(new Error('Geolocation not supported'));
+        const e = new Error('Geolocation not supported');
+        e.code = 0;
+        reject(e);
         return;
       }
       navigator.geolocation.getCurrentPosition(
@@ -60,22 +66,48 @@
             accuracy: p.coords.accuracy,
           }),
         (err) => reject(err),
-        { enableHighAccuracy: true, timeout: GEO_TIMEOUT_MS, maximumAge: 30000 }
+        opts
       );
     });
+  }
+  // Low-first, with fallback to high accuracy. Throws on failure.
+  async function getPosition() {
+    try {
+      return await requestPosition({
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 60000,
+      });
+    } catch (err) {
+      if (err?.code === 1) throw err; // denied — don't retry
+      return await requestPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 60000,
+      });
+    }
   }
   async function ensurePosition() {
     if (geoState === 'ok') return currentPos;
     if (geoState === 'loading') return null;
     geoState = 'loading';
+    geoError = null;
     try {
       currentPos = await getPosition();
       geoState = 'ok';
       return currentPos;
     } catch (err) {
-      geoState = err && err.code === 1 ? 'denied' : 'error';
+      geoState = err?.code === 1 ? 'denied' : 'error';
+      geoError = err;
       return null;
     }
+  }
+  function geoErrorMessage() {
+    const code = geoError?.code;
+    if (code === 1) return 'Location access is off. Turn it on in your browser to see the nearest code automatically.';
+    if (code === 2) return "Your device couldn't determine its location (no GPS/WiFi fix available).";
+    if (code === 3) return 'Location request timed out. Move somewhere with better GPS/WiFi and try again.';
+    return "Couldn't get your location right now.";
   }
 
   // ---------- Nominatim ----------
@@ -147,46 +179,61 @@
       return; // user navigated away
     }
 
-    if (geoState === 'denied') {
+    if (geoState !== 'ok' || !pos) {
       $app.innerHTML = `
         <div class="stack-lg">
-          <div class="banner">Location access is off. Turn it on in your browser to see the nearest code automatically.</div>
+          <div class="banner">${escapeHtml(geoErrorMessage())}</div>
+          <button type="button" class="btn btn-block" id="retry-geo">Try again</button>
           ${listMarkup(null)}
         </div>`;
-      attachListHandlers();
-      return;
-    }
-    if (geoState === 'error' || !pos) {
-      $app.innerHTML = `
-        <div class="stack-lg">
-          <div class="banner">Couldn't get your location right now. Showing all codes.</div>
-          ${listMarkup(null)}
-        </div>`;
+      document.getElementById('retry-geo').addEventListener('click', () => {
+        geoState = 'idle';
+        geoError = null;
+        route();
+      });
       attachListHandlers();
       return;
     }
 
-    const withDist = entries
-      .map((e) => ({ ...e, dist: haversine(pos, { lat: e.lat, lng: e.lng }) }))
-      .sort((a, b) => a.dist - b.dist);
-    const nearest = withDist[0];
+    homeState = {
+      sorted: entries
+        .map((e) => ({ ...e, dist: haversine(pos, { lat: e.lat, lng: e.lng }) }))
+        .sort((a, b) => a.dist - b.dist),
+      index: 0,
+    };
+    renderHomeCard();
+  }
+
+  function renderHomeCard() {
+    const { sorted, index } = homeState;
+    const entry = sorted[index];
+    const total = sorted.length;
 
     $app.innerHTML = `
       <div class="card nearest">
-        <div class="name">${escapeHtml(nearest.name)}</div>
-        <div class="code" id="code-value" role="button" tabindex="0" aria-label="Tap to copy code">${escapeHtml(nearest.code)}</div>
-        <div class="address">${escapeHtml(nearest.address)}</div>
-        <div class="distance">${formatDistance(nearest.dist)} away</div>
+        <div class="name">${escapeHtml(entry.name)}</div>
+        <div class="code" id="code-value" role="button" tabindex="0" aria-label="Tap to copy code">${escapeHtml(entry.code)}</div>
+        <div class="address">${escapeHtml(entry.address)}</div>
+        <div class="distance">${formatDistance(entry.dist)} away</div>
         <div class="copy-hint">Tap code to copy</div>
-      </div>`;
+      </div>
+      ${
+        total > 1
+          ? `
+      <div class="pager">
+        <button type="button" class="btn pager-btn" id="pager-prev" ${index === 0 ? 'disabled' : ''} aria-label="Closer entry">‹</button>
+        <div class="pager-count">${index + 1} of ${total}</div>
+        <button type="button" class="btn pager-btn" id="pager-next" ${index === total - 1 ? 'disabled' : ''} aria-label="Next nearest">›</button>
+      </div>`
+          : ''
+      }`;
 
     const codeEl = document.getElementById('code-value');
     const doCopy = async () => {
       try {
-        await navigator.clipboard.writeText(nearest.code);
+        await navigator.clipboard.writeText(entry.code);
         toast('Copied');
       } catch {
-        // Fallback: select text
         const range = document.createRange();
         range.selectNodeContents(codeEl);
         const sel = window.getSelection();
@@ -202,6 +249,21 @@
         doCopy();
       }
     });
+
+    if (total > 1) {
+      document.getElementById('pager-prev').addEventListener('click', () => {
+        if (homeState.index > 0) {
+          homeState.index--;
+          renderHomeCard();
+        }
+      });
+      document.getElementById('pager-next').addEventListener('click', () => {
+        if (homeState.index < homeState.sorted.length - 1) {
+          homeState.index++;
+          renderHomeCard();
+        }
+      });
+    }
   }
 
   // ---------- List ----------
