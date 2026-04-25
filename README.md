@@ -4,7 +4,7 @@ A tiny, mobile-first web app that shows the entry code of the building you're st
 
 Save an entry once — a name, a numeric code (with `#` / `*`), and an address — and the home screen automatically surfaces the nearest saved code based on your current GPS. Tap the code to copy it. Use the `‹` / `›` pager if the top match isn't the one you wanted.
 
-Live at: **https://whatsmycode.lior.dev**
+Live at: **https://whatsthecode.lior.dev**
 
 ## Features
 
