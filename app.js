@@ -214,6 +214,7 @@
         <div class="name">${escapeHtml(entry.name)}</div>
         <div class="code" id="code-value" role="button" tabindex="0" aria-label="Tap to copy code">${escapeHtml(entry.code)}</div>
         <div class="address">${escapeHtml(entry.address)}</div>
+        ${entry.comment ? `<div class="comment">${escapeHtml(entry.comment)}</div>` : ''}
         <div class="distance">${formatDistance(entry.dist)} away</div>
         <div class="copy-hint">Tap code to copy</div>
       </div>
@@ -295,6 +296,7 @@
                 : ''
             }</div>
             <div class="addr" title="${escapeHtml(e.address)}">${escapeHtml(e.address)}</div>
+            ${e.comment ? `<div class="comment" title="${escapeHtml(e.comment)}">${escapeHtml(e.comment)}</div>` : ''}
           </div>
           <div class="code-chip">${escapeHtml(e.code)}</div>
           <button class="menu-btn" data-action="edit" aria-label="Edit">✎</button>
@@ -340,6 +342,7 @@
       id: editing?.id || null,
       name: editing?.name || '',
       code: editing?.code || '',
+      comment: editing?.comment || '',
       address: editing?.address || '',
       lat: editing?.lat ?? null,
       lng: editing?.lng ?? null,
@@ -357,10 +360,11 @@
         <div class="field">
           <label for="f-code">Entry code</label>
           <input id="f-code" class="mono" type="text" inputmode="tel" autocomplete="off" placeholder="e.g. #9163" value="${escapeHtml(formState.code)}" />
-          <div class="chips">
-            <button type="button" class="chip" data-append="#">#</button>
-            <button type="button" class="chip" data-append="*">*</button>
-          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-comment">Comment <span class="muted" style="font-weight:400">(optional)</span></label>
+          <input id="f-comment" type="text" autocomplete="off" placeholder="e.g. floor 3 apt 2" value="${escapeHtml(formState.comment)}" />
         </div>
 
         <div class="field">
@@ -483,17 +487,6 @@
   }, SEARCH_DEBOUNCE_MS);
 
   function attachFormHandlers() {
-    document.querySelectorAll('.chip[data-append]').forEach((chip) => {
-      chip.addEventListener('click', () => {
-        const code = document.getElementById('f-code');
-        const pos = code.selectionStart ?? code.value.length;
-        code.value = code.value.slice(0, pos) + chip.dataset.append + code.value.slice(pos);
-        code.focus();
-        code.setSelectionRange(pos + 1, pos + 1);
-        updateSaveEnabled();
-      });
-    });
-
     document.getElementById('f-name').addEventListener('input', updateSaveEnabled);
     document.getElementById('f-code').addEventListener('input', updateSaveEnabled);
 
@@ -556,6 +549,7 @@
   function saveForm() {
     const name = document.getElementById('f-name').value.trim();
     const code = document.getElementById('f-code').value.trim();
+    const comment = document.getElementById('f-comment').value.trim();
     if (!name || !code || formState.lat == null || formState.lng == null) return;
     if (formState.id) {
       const idx = entries.findIndex((e) => e.id === formState.id);
@@ -564,6 +558,7 @@
           ...entries[idx],
           name,
           code,
+          comment,
           address: formState.address,
           lat: formState.lat,
           lng: formState.lng,
@@ -578,6 +573,7 @@
         id,
         name,
         code,
+        comment,
         address: formState.address,
         lat: formState.lat,
         lng: formState.lng,
