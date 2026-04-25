@@ -132,8 +132,6 @@ body {
   letter-spacing: 0.02em;
   color: var(--accent);
   margin: 8px 0 14px;
-  cursor: pointer;
-  user-select: all;
   word-break: break-all;
 }
 .nearest .comment {
@@ -149,7 +147,6 @@ body {
   font-size: 13px;
   color: var(--muted);
 }
-.copy-hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
 
 .pager {
   display: flex;

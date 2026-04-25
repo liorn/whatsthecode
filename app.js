@@ -212,11 +212,10 @@
     $app.innerHTML = `
       <div class="card nearest">
         <div class="name">${escapeHtml(entry.name)}</div>
-        <div class="code" id="code-value" role="button" tabindex="0" aria-label="Tap to copy code">${escapeHtml(entry.code)}</div>
+        <div class="code">${escapeHtml(entry.code)}</div>
         ${entry.comment ? `<div class="comment">${escapeHtml(entry.comment)}</div>` : ''}
         <div class="address">${escapeHtml(entry.address)}</div>
         <div class="distance">${formatDistance(entry.dist)} away</div>
-        <div class="copy-hint">Tap code to copy</div>
       </div>
       ${
         total > 1
@@ -228,28 +227,6 @@
       </div>`
           : ''
       }`;
-
-    const codeEl = document.getElementById('code-value');
-    const doCopy = async () => {
-      try {
-        await navigator.clipboard.writeText(entry.code);
-        toast('Copied');
-      } catch {
-        const range = document.createRange();
-        range.selectNodeContents(codeEl);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        toast('Select & copy');
-      }
-    };
-    codeEl.addEventListener('click', doCopy);
-    codeEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        doCopy();
-      }
-    });
 
     if (total > 1) {
       document.getElementById('pager-prev').addEventListener('click', () => {
