@@ -213,8 +213,8 @@
       <div class="card nearest">
         <div class="name">${escapeHtml(entry.name)}</div>
         <div class="code" id="code-value" role="button" tabindex="0" aria-label="Tap to copy code">${escapeHtml(entry.code)}</div>
-        <div class="address">${escapeHtml(entry.address)}</div>
         ${entry.comment ? `<div class="comment">${escapeHtml(entry.comment)}</div>` : ''}
+        <div class="address">${escapeHtml(entry.address)}</div>
         <div class="distance">${formatDistance(entry.dist)} away</div>
         <div class="copy-hint">Tap code to copy</div>
       </div>

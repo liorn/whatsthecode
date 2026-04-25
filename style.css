@@ -136,13 +136,14 @@ body {
   user-select: all;
   word-break: break-all;
 }
-.nearest .address { font-size: 14px; color: var(--text); }
 .nearest .comment {
-  margin-top: 8px;
-  font-size: 14px;
+  font-size: clamp(20px, 5.5vw, 28px);
+  line-height: 1.25;
   color: var(--accent);
   font-style: italic;
+  margin-bottom: 10px;
 }
+.nearest .address { font-size: 14px; color: var(--text); }
 .nearest .distance {
   margin-top: 6px;
   font-size: 13px;
