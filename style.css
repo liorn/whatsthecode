@@ -137,6 +137,12 @@ body {
   word-break: break-all;
 }
 .nearest .address { font-size: 14px; color: var(--text); }
+.nearest .comment {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--accent);
+  font-style: italic;
+}
 .nearest .distance {
   margin-top: 6px;
   font-size: 13px;
@@ -256,6 +262,15 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.list-entry .body .comment {
+  font-size: 13px;
+  color: var(--accent);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
 }
 .list-entry .code-chip {
   font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
