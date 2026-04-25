@@ -607,7 +607,69 @@
     location.hash = '#/';
   }
 
+  // ---------- Install (Add to Home Screen) ----------
+  function setupInstall() {
+    const installBtn = document.getElementById('install-btn');
+    const iosDialog = document.getElementById('ios-install-dialog');
+    const iosClose = document.getElementById('ios-install-close');
+    if (!installBtn) return;
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const inStandalone =
+      window.navigator.standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches;
+
+    let deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.hidden = false;
+    });
+
+    window.addEventListener('appinstalled', () => {
+      installBtn.hidden = true;
+      deferredPrompt = null;
+    });
+
+    // iOS Safari has no install API — show the button to open the how-to.
+    if (isIOS && !inStandalone) {
+      installBtn.hidden = false;
+    }
+
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        if (choice?.outcome === 'accepted') installBtn.hidden = true;
+      } else if (isIOS) {
+        if (typeof iosDialog.showModal === 'function') iosDialog.showModal();
+        else iosDialog.setAttribute('open', '');
+      }
+    });
+
+    iosClose?.addEventListener('click', () => {
+      if (typeof iosDialog.close === 'function') iosDialog.close();
+      else iosDialog.removeAttribute('open');
+    });
+    iosDialog?.addEventListener('click', (e) => {
+      // Click on backdrop closes
+      if (e.target === iosDialog) {
+        if (typeof iosDialog.close === 'function') iosDialog.close();
+        else iosDialog.removeAttribute('open');
+      }
+    });
+  }
+
   // ---------- Boot ----------
   window.addEventListener('hashchange', route);
   route();
+  setupInstall();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
 })();

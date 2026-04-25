@@ -18,8 +18,19 @@
 <body>
   <header class="topbar">
     <h1>What's the Code</h1>
+    <button type="button" class="install-btn" id="install-btn" hidden>Install</button>
   </header>
   <main id="app" aria-live="polite"></main>
+
+  <dialog id="ios-install-dialog" class="install-dialog">
+    <h2>Add to Home Screen</h2>
+    <ol>
+      <li>Tap the <strong>Share</strong> icon at the bottom of Safari.</li>
+      <li>Scroll and tap <strong>Add to Home Screen</strong>.</li>
+      <li>Tap <strong>Add</strong>.</li>
+    </ol>
+    <button type="button" class="btn primary btn-block" id="ios-install-close">Got it</button>
+  </dialog>
   <nav class="bottom-nav" role="navigation">
     <a href="#/" data-route="/">
       <span class="icon" aria-hidden="true">◎</span>
