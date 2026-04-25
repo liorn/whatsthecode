@@ -360,10 +360,6 @@
         <div class="field">
           <label for="f-code">Entry code</label>
           <input id="f-code" class="mono" type="text" inputmode="tel" autocomplete="off" placeholder="e.g. #9163" value="${escapeHtml(formState.code)}" />
-          <div class="chips">
-            <button type="button" class="chip" data-append="#">#</button>
-            <button type="button" class="chip" data-append="*">*</button>
-          </div>
         </div>
 
         <div class="field">
@@ -491,17 +487,6 @@
   }, SEARCH_DEBOUNCE_MS);
 
   function attachFormHandlers() {
-    document.querySelectorAll('.chip[data-append]').forEach((chip) => {
-      chip.addEventListener('click', () => {
-        const code = document.getElementById('f-code');
-        const pos = code.selectionStart ?? code.value.length;
-        code.value = code.value.slice(0, pos) + chip.dataset.append + code.value.slice(pos);
-        code.focus();
-        code.setSelectionRange(pos + 1, pos + 1);
-        updateSaveEnabled();
-      });
-    });
-
     document.getElementById('f-name').addEventListener('input', updateSaveEnabled);
     document.getElementById('f-code').addEventListener('input', updateSaveEnabled);
 
