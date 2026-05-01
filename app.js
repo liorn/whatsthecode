@@ -154,6 +154,42 @@
     };
   }
 
+  // ---------- Share encoding ----------
+  function encodeShare(entry) {
+    const payload = {
+      n: entry.name,
+      c: entry.code,
+      a: entry.address,
+      la: entry.lat,
+      lo: entry.lng,
+    };
+    if (entry.comment) payload.k = entry.comment;
+    const json = JSON.stringify(payload);
+    const b64 = btoa(unescape(encodeURIComponent(json)));
+    return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function decodeShare(s) {
+    try {
+      const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(escape(atob(b64)));
+      const p = JSON.parse(json);
+      if (typeof p.n !== 'string' || !p.n.trim()) return null;
+      if (typeof p.c !== 'string' || !p.c.trim()) return null;
+      if (typeof p.a !== 'string' || !p.a.trim()) return null;
+      if (typeof p.la !== 'number' || typeof p.lo !== 'number') return null;
+      return {
+        name: p.n,
+        code: p.c,
+        address: p.a,
+        lat: p.la,
+        lng: p.lo,
+        comment: p.k || '',
+      };
+    } catch {
+      return null;
+    }
+  }
+
   // ---------- Home ----------
   async function renderHome() {
     if (entries.length === 0) {
@@ -299,6 +335,7 @@
             ${e.comment ? `<div class="comment" title="${escapeHtml(e.comment)}">${escapeHtml(e.comment)}</div>` : ''}
           </div>
           <div class="code-chip">${escapeHtml(e.code)}</div>
+          <button class="menu-btn" data-action="share" aria-label="Share">↗</button>
           <button class="menu-btn" data-action="edit" aria-label="Edit">✎</button>
           <button class="menu-btn" data-action="delete" aria-label="Delete">🗑</button>
         </div>`
@@ -309,6 +346,7 @@
   function attachListHandlers() {
     $app.querySelectorAll('.list-entry').forEach((row) => {
       const id = row.dataset.id;
+      row.querySelector('[data-action="share"]').addEventListener('click', () => shareEntry(id));
       row.querySelector('[data-action="edit"]').addEventListener('click', () => {
         location.hash = `#/edit/${encodeURIComponent(id)}`;
       });
@@ -322,6 +360,30 @@
         }
       });
     });
+  }
+  async function shareEntry(id) {
+    const entry = entries.find((e) => e.id === id);
+    if (!entry) return;
+    const url = `${location.origin}${location.pathname}#/share/${encodeShare(entry)}`;
+    const shareData = {
+      title: `Code for ${entry.name}`,
+      text: `Code for ${entry.name}`,
+      url,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        /* user cancelled */
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('Link copied');
+      } catch {
+        toast("Couldn't copy link");
+      }
+    }
   }
   async function renderList() {
     if (geoState === 'idle') {
@@ -585,6 +647,67 @@
     location.hash = '#/list';
   }
 
+  // ---------- Share receive ----------
+  function findSimilarEntry(incoming) {
+    const target = { lat: incoming.lat, lng: incoming.lng };
+    return (
+      entries.find(
+        (e) =>
+          e.code === incoming.code &&
+          haversine(target, { lat: e.lat, lng: e.lng }) < 100
+      ) || null
+    );
+  }
+  function renderShare(rawPayload) {
+    const incoming = decodeShare(rawPayload);
+    if (!incoming) {
+      $app.innerHTML = `
+        <div class="empty">
+          <h2>Broken link</h2>
+          <p>This share link looks broken. Ask the sender to send it again.</p>
+          <p style="margin-top:20px"><a class="btn primary" href="#/">Home</a></p>
+        </div>`;
+      return;
+    }
+
+    const dup = findSimilarEntry(incoming);
+
+    $app.innerHTML = `
+      <div class="stack-lg">
+        <div class="card nearest">
+          <div class="name">${escapeHtml(incoming.name)}</div>
+          <div class="code">${escapeHtml(incoming.code)}</div>
+          ${incoming.comment ? `<div class="comment">${escapeHtml(incoming.comment)}</div>` : ''}
+          <div class="address">${escapeHtml(incoming.address)}</div>
+        </div>
+        ${dup ? `<div class="banner">You have a similar code for ${escapeHtml(dup.name)}.</div>` : ''}
+        <div class="form-actions">
+          <a href="#/" class="btn">Cancel</a>
+          <button type="button" class="btn primary" id="share-add-btn">Add to my codes</button>
+        </div>
+      </div>`;
+
+    document.getElementById('share-add-btn').addEventListener('click', () => {
+      const id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      entries.push({
+        id,
+        name: incoming.name,
+        code: incoming.code,
+        comment: incoming.comment,
+        address: incoming.address,
+        lat: incoming.lat,
+        lng: incoming.lng,
+        createdAt: Date.now(),
+      });
+      saveEntries();
+      toast('Added');
+      location.hash = '#/list';
+    });
+  }
+
   // ---------- Router ----------
   function navKeyFor(hash) {
     if (hash.startsWith('#/add')) return '#/add';
@@ -602,8 +725,10 @@
     if (hash === '#/' || hash === '' || hash === '#') return renderHome();
     if (hash === '#/list') return renderList();
     if (hash === '#/add') return renderForm(null);
-    const m = hash.match(/^#\/edit\/(.+)$/);
-    if (m) return renderForm(decodeURIComponent(m[1]));
+    const me = hash.match(/^#\/edit\/(.+)$/);
+    if (me) return renderForm(decodeURIComponent(me[1]));
+    const ms = hash.match(/^#\/share\/(.+)$/);
+    if (ms) return renderShare(ms[1]);
     location.hash = '#/';
   }
 
